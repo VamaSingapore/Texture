@@ -186,7 +186,8 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   CGFloat _contentOffsetAdjustmentTopVisibleNodeOffset;
   CGFloat _leadingScreensForBatching;
   BOOL _automaticallyAdjustsContentOffset;
-  
+  CGPoint _adjustedContentOffset;
+
   CGPoint _deceleratingVelocity;
 
   CGFloat _nodesConstrainedWidth;
@@ -891,6 +892,7 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   newContentOffset.y += (newRowOriginYInSelf - _contentOffsetAdjustmentTopVisibleNodeOffset);
   self.contentOffset = newContentOffset;
   _contentOffsetAdjustmentTopVisibleNode = nil;
+  _adjustedContentOffset = newContentOffset;
 }
 
 #pragma mark - Intercepted selectors
@@ -1258,6 +1260,10 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView
 {
+  if (!CGPointEqualToPoint(CGPointZero, _adjustedContentOffset)) {
+    self.contentOffset = _adjustedContentOffset;
+    _adjustedContentOffset = CGPointZero;
+  }
   if (scrollView != self && UITABLEVIEW_RESPONDS_TO_SELECTOR()) {
     [super scrollViewDidScroll:scrollView];
     return;
