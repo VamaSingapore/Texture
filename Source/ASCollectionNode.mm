@@ -64,6 +64,7 @@
 @property (nonatomic) BOOL animatesContentOffset;
 @property (nonatomic) BOOL showsVerticalScrollIndicator;
 @property (nonatomic) BOOL showsHorizontalScrollIndicator;
+@property (nonatomic) BOOL automaticallyAdjustsContentOffset;
 @property (nonatomic) BOOL pagingEnabled;
 @end
 
@@ -85,6 +86,7 @@
     _flags.animatesContentOffset = NO;
     _flags.showsVerticalScrollIndicator = YES;
     _flags.showsHorizontalScrollIndicator = YES;
+    _automaticallyAdjustsContentOffset = NO;
     _flags.pagingEnabled = NO;
   }
   return self;
@@ -313,16 +315,17 @@
   
   if (_pendingState) {
     _ASCollectionPendingState *pendingState = _pendingState;
-    self.pendingState                   = nil;
-    view.asyncDelegate                  = pendingState.delegate;
-    view.asyncDataSource                = pendingState.dataSource;
-    view.inverted                       = pendingState.inverted;
-    view.allowsSelection                = pendingState.allowsSelection;
-    view.allowsMultipleSelection        = pendingState.allowsMultipleSelection;
-    view.cellLayoutMode                 = pendingState.cellLayoutMode;
-    view.layoutInspector                = pendingState.layoutInspector;
-    view.showsVerticalScrollIndicator   = pendingState.showsVerticalScrollIndicator;
-    view.showsHorizontalScrollIndicator = pendingState.showsHorizontalScrollIndicator;
+    self.pendingState                      = nil;
+    view.asyncDelegate                     = pendingState.delegate;
+    view.asyncDataSource                   = pendingState.dataSource;
+    view.inverted                          = pendingState.inverted;
+    view.allowsSelection                   = pendingState.allowsSelection;
+    view.allowsMultipleSelection           = pendingState.allowsMultipleSelection;
+    view.cellLayoutMode                    = pendingState.cellLayoutMode;
+    view.layoutInspector                   = pendingState.layoutInspector;
+    view.showsVerticalScrollIndicator      = pendingState.showsVerticalScrollIndicator;
+    view.showsHorizontalScrollIndicator    = pendingState.showsHorizontalScrollIndicator;
+    view.automaticallyAdjustsContentOffset = pendingState.automaticallyAdjustsContentOffset;
 #if !TARGET_OS_TV
     view.pagingEnabled                  = pendingState.pagingEnabled;
 #endif
@@ -654,6 +657,27 @@
     return _pendingState.showsHorizontalScrollIndicator;
   } else {
     return self.view.showsHorizontalScrollIndicator;
+  }
+}
+
+- (void)setAutomaticallyAdjustsContentOffset:(BOOL)automaticallyAdjustsContentOffset
+{
+  _ASCollectionPendingState *pendingState = self.pendingState;
+  if (pendingState) {
+    pendingState.automaticallyAdjustsContentOffset = automaticallyAdjustsContentOffset;
+  } else {
+    ASDisplayNodeAssert(self.nodeLoaded, @"ASCollectionNode should be loaded if pendingState doesn't exist");
+    self.view.automaticallyAdjustsContentOffset = automaticallyAdjustsContentOffset;
+  }
+}
+
+- (BOOL)automaticallyAdjustsContentOffset
+{
+  _ASCollectionPendingState *pendingState = self.pendingState;
+  if (pendingState) {
+    return pendingState.automaticallyAdjustsContentOffset;
+  } else {
+    return self.view.automaticallyAdjustsContentOffset;
   }
 }
 

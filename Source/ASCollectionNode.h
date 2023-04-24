@@ -126,6 +126,17 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic) BOOL showsHorizontalScrollIndicator;
 
 /**
+ * YES to automatically adjust the contentOffset when cells are inserted or deleted above
+ * visible cells, maintaining the users' visible scroll position.
+ *
+ * @note This is only applied to non-animated updates. For animated updates, there is no way to
+ * synchronize or "cancel out" the appearance of a scroll due to UICollectionView API limitations.
+ *
+ * default is NO.
+ */
+@property (nonatomic) BOOL automaticallyAdjustsContentOffset;
+
+/**
  * A Boolean value that determines whether paging is enabled for the scroll view.
  * The default value of this property is NO.
  */

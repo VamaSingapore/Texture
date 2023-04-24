@@ -144,6 +144,17 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic) CGPoint contentOffset ASDISPLAYNODE_DEPRECATED_MSG("Use ASCollectionNode property instead.");
 
 /**
+ * YES to automatically adjust the contentOffset when cells are inserted or deleted above
+ * visible cells, maintaining the users' visible scroll position.
+ *
+ * @note This is only applied to non-animated updates. For animated updates, there is no way to
+ * synchronize or "cancel out" the appearance of a scroll due to UICollectionView API limitations.
+ *
+ * default is NO.
+ */
+@property (nonatomic) BOOL automaticallyAdjustsContentOffset ASDISPLAYNODE_DEPRECATED_MSG("Use ASCollectionNode property instead.");
+
+/**
  * The object that acts as the asynchronous delegate of the collection view
  *
  * @discussion The delegate must adopt the ASCollectionDelegate protocol. The collection view maintains a weak reference to the delegate object.

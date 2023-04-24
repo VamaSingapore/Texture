@@ -114,6 +114,12 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
   // CountedSet because UIKit may display the same element in multiple cells e.g. during animations.
   NSCountedSet<ASCollectionElement *> *_visibleElements;
   
+  // The top cell node that was visible before the update.
+  __weak ASCellNode *_contentOffsetAdjustmentTopVisibleNode;
+  // The y-offset of the top visible row's origin before the update.
+  CGFloat _contentOffsetAdjustmentTopVisibleNodeOffset;
+  BOOL _automaticallyAdjustsContentOffset;
+
   CGPoint _deceleratingVelocity;
 
   BOOL _zeroContentInsets;
@@ -308,6 +314,8 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
   _registeredSupplementaryKinds = [[NSMutableSet alloc] init];
   _visibleElements = [[NSCountedSet alloc] init];
   
+  _automaticallyAdjustsContentOffset = NO;
+
   _cellsForVisibilityUpdates = [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality];
   _cellsForLayoutUpdates = [NSHashTable hashTableWithOptions:NSHashTableObjectPointerPersonality];
   self.backgroundColor = [UIColor whiteColor];
@@ -1066,6 +1074,47 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
 }
 
 #pragma mark -
+#pragma mark adjust content offset
+
+- (void)beginAdjustingContentOffset
+{
+  NSIndexPath *firstVisibleIndexPath = [self.indexPathsForVisibleItems sortedArrayUsingSelector:@selector(compare:)].firstObject;
+  if (firstVisibleIndexPath) {
+    ASCellNode *node = [self nodeForItemAtIndexPath:firstVisibleIndexPath];
+    if (node) {
+      _contentOffsetAdjustmentTopVisibleNode = node;
+      _contentOffsetAdjustmentTopVisibleNodeOffset = [self layoutAttributesForItemAtIndexPath:firstVisibleIndexPath].frame.origin.y - self.bounds.origin.y;
+    }
+  }
+}
+
+- (void)endAdjustingContentOffsetAnimated:(BOOL)animated
+{
+  // We can't do this for animated updates.
+  if (animated) {
+    return;
+  }
+  
+  // We can't do this if we didn't have a top visible row before.
+  if (_contentOffsetAdjustmentTopVisibleNode == nil) {
+    return;
+  }
+  
+  NSIndexPath *newIndexPathForTopVisibleRow = [self indexPathForNode:_contentOffsetAdjustmentTopVisibleNode];
+  // We can't do this if our top visible row was deleted
+  if (newIndexPathForTopVisibleRow == nil) {
+    return;
+  }
+  
+  CGFloat newRowOriginYInSelf = [self layoutAttributesForItemAtIndexPath:newIndexPathForTopVisibleRow].frame.origin.y - self.bounds.origin.y;
+  CGPoint newContentOffset = self.contentOffset;
+  newContentOffset.y += (newRowOriginYInSelf - _contentOffsetAdjustmentTopVisibleNodeOffset);
+  self.contentOffset = newContentOffset;
+  _contentOffsetAdjustmentTopVisibleNode = nil;
+}
+
+
+#pragma mark -
 #pragma mark Intercepted selectors.
 
 - (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView
@@ -1713,6 +1762,16 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
   return _leadingScreensForBatching;
 }
 
+- (BOOL)automaticallyAdjustsContentOffset
+{
+  return _automaticallyAdjustsContentOffset;
+}
+
+- (void)setAutomaticallyAdjustsContentOffset:(BOOL)automaticallyAdjustsContentOffset
+{
+  _automaticallyAdjustsContentOffset = automaticallyAdjustsContentOffset;
+}
+
 - (ASScrollDirection)scrollDirection
 {
   CGPoint scrollVelocity;
@@ -2227,6 +2286,11 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
     [changeSet executeCompletionHandlerWithFinished:NO];
     return; // if the asyncDataSource has become invalid while we are processing, ignore this request to avoid crashes
   }
+  
+  BOOL shouldAdjustContentOffset = (_automaticallyAdjustsContentOffset && !changeSet.includesReloadData);
+  if (shouldAdjustContentOffset) {
+    [self beginAdjustingContentOffset];
+  }
 
   //TODO Do we need to notify _layoutFacilitator before reloadData?
   for (_ASHierarchyItemChange *change in [changeSet itemChangesOfType:_ASHierarchyChangeTypeDelete]) {
@@ -2323,6 +2387,9 @@ static NSString * const kReuseIdentifier = @"_ASCollectionReuseIdentifier";
       [self->_rangeController updateIfNeeded];
     }
   });
+  if (shouldAdjustContentOffset) {
+    [self endAdjustingContentOffsetAnimated:changeSet.animated];
+  }
 }
 
 #pragma mark - ASCellNodeDelegate
